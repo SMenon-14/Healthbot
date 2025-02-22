@@ -4,13 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Healthcare Chatbot</title>
+</head>
+<body>
+    <div id="chatWindow"></div>
+    <input type="text" id="userMessage" placeholder="Ask a healthcare question...">
+    <button onclick="sendMessage()">Send</button>
+
+    <!-- CSRF Token from Django Template -->
+    <form method="post">
+        {% csrf_token %}
+    </form>
+
     <script>
+        // Function to retrieve CSRF token from the form
+        function getCSRFToken() {
+            const token = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            return token;
+        }
+
+        // Function to send message to chatbot and get the response
         function sendMessage() {
             const message = document.getElementById("userMessage").value;
+
             fetch("/chat/", {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": getCSRFToken()  // Send CSRF token with the request
                 },
                 body: JSON.stringify({"message": message})
             })
@@ -19,13 +39,9 @@
                 const chatWindow = document.getElementById("chatWindow");
                 chatWindow.innerHTML += "<p><strong>You:</strong> " + message + "</p>";
                 chatWindow.innerHTML += "<p><strong>Bot:</strong> " + data.response + "</p>";
-            });
+            })
+            .catch(error => console.error('Error:', error));  // Log any errors for debugging
         }
     </script>
-</head>
-<body>
-    <div id="chatWindow"></div>
-    <input type="text" id="userMessage" placeholder="Ask a healthcare question...">
-    <button onclick="sendMessage()">Send</button>
 </body>
 </html>
