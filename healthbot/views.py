@@ -4,6 +4,8 @@ import logging
 from django.shortcuts import render
 from django.http import JsonResponse
 
+from healthbot.models import MedicalCondition
+
 # Set your OpenAI API key securely
 
 client = OpenAI(
