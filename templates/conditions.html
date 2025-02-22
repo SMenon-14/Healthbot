@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Healthcare Chatbot</title>
+    <title>Medical Conditions Information</title>
+    <p>Here, you can find details about different conditions.</p>
+    <a href="{% url 'home' %}">Back to Home</a>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -89,11 +91,11 @@
 </head>
 <body>
 
-    <h1>Healthcare Chatbot</h1>
+    <h1>Medical Conditions Information</h1>
     <div id="chatWindow"></div>
 
     <div id="inputContainer">
-        <input type="text" id="userMessage" placeholder="Ask a healthcare question..." onkeypress="handleKeyPress(event)">
+        <input type="text" id="userMessage" placeholder="Name a condition you want to know about..." onkeypress="handleKeyPress(event)">
         <button onclick="sendMessage()">Send</button>
     </div>
 
@@ -103,6 +105,11 @@
     </form>
 
     <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Simulate the bot sending an initial message when the page loads
+        const initialBotMessage = "Hello! I'm here to help you with any medical questions. What would you like to know today?";
+        displayBotMessage(initialBotMessage);
+    });
         function getCSRFToken() {
             return document.querySelector('[name=csrfmiddlewaretoken]').value;
         }
@@ -111,7 +118,6 @@
             const userInput = document.getElementById("userMessage");
             const message = userInput.value.trim();
             if (message === "") return;
-
             const chatWindow = document.getElementById("chatWindow");
 
             // Add user message to chat window
@@ -121,6 +127,7 @@
             chatWindow.appendChild(userMessageElement);
 
             userInput.value = ""; // Clear input field
+            user_message = "I want to know more about "+message+", what are the symptoms, treatments, and exams/labs I might take to know if I have this.";
 
             fetch("/chat/", {
                 method: "POST",
@@ -128,15 +135,15 @@
                     "Content-Type": "application/json",
                     "X-CSRFToken": getCSRFToken()
                 },
-                body: JSON.stringify({"message": message})
+                body: JSON.stringify({"message": user_message})
             })
             .then(response => response.json())
             .then(data => {
-                // Add bot message to chat window
-                const botMessageElement = document.createElement("div");
-                botMessageElement.classList.add("message", "bot-message");
-                botMessageElement.textContent = data.response;
-                chatWindow.appendChild(botMessageElement);
+            // Insert the bot's response as HTML using innerHTML
+            const botMessageElement = document.createElement("div");
+            botMessageElement.classList.add("message", "bot-message");
+            botMessageElement.innerHTML = data.response;  // This allows HTML tags to be rendered
+            chatWindow.appendChild(botMessageElement);
 
                 // Auto-scroll to the latest message
                 chatWindow.scrollTop = chatWindow.scrollHeight;
@@ -149,6 +156,20 @@
                 sendMessage();
             }
         }
+    function displayBotMessage(message) {
+        const chatWindow = document.getElementById("chatWindow");
+
+        // Create the bot message element
+        const botMessageElement = document.createElement("div");
+        botMessageElement.classList.add("message", "bot-message");
+        botMessageElement.textContent = message;
+
+        // Append it to the chat window
+        chatWindow.appendChild(botMessageElement);
+
+        // Auto-scroll to the latest message
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+    }
     </script>
 
 </body>
