@@ -1,18 +1,59 @@
 from openai import OpenAI
 import json
+import pandas as pd
 import logging
+from django.conf import settings
 from django.shortcuts import render
 from django.http import JsonResponse
+import requests
 
 from healthbot.models import MedicalCondition
 
 # Set your OpenAI API key securely
 
-client = OpenAI(
-  api_key=":)"
-)
+client = OpenAI(api_key=":)")
+csv_data = pd.read_csv('/UHCFormularyData.csv')  # Update with your file path
 
-#logger = logging.getLogger(__name__)
+
+def get_drug_info(query):
+    # Convert the query to title case to match the drug names in a case-insensitive manner
+    query = query.strip().title()
+    # Filter the DataFrame for rows that match the drug name
+    drug_info = csv_data[csv_data['Drug Name'].str.contains(query, case=False, na=False)]
+
+    if drug_info.empty:
+        print("returning empty")
+        return 0
+
+    # Extract the relevant columns
+    relevant_columns = ['Drug Name', 'Brand or Generic', 'Drug Tier', 'Coverage Rules or Limits on Use']
+    return drug_info[relevant_columns].to_dict(orient='records')
+
+def rag_drug_info(query):
+    # Step 1: Retrieve relevant drug information
+    drug_info = get_drug_info(query)  # Assuming `get_drug_info` fetches data from DB
+    if drug_info is 0:
+        print("Found this")
+        return f"""You are a healthcare assistant, answer the user inputted question: {query}"""
+    if drug_info:
+        first_drug = drug_info[0]
+        name = first_drug['Drug Name']
+        drug_tier = first_drug['Drug Tier']
+        brand_or_generic = first_drug['Brand or Generic']
+        coverage_rules = first_drug['Drug Tier']
+        # Step 2: Construct the prompt using the retrieved information
+        prompt = f"""
+        You are a healthcare assistant. Below is some information about a drug:
+        Name: {name}
+        Drug Tier: {drug_tier}
+        Brand or Generic: {brand_or_generic}
+        Coverage Rules Under United Healthcare: {coverage_rules}
+
+        User asked: "{query}"
+        Provide a detailed, helpful response based on the above information and your own knowledge and TELL THE USER WHAT THE UNITED HEALTH CARE COVERAGE RULES ARE!!!!!
+        """
+    return prompt
+
 def index(request):
     return render(request, 'index.html')
 
@@ -45,6 +86,8 @@ def chat(request):
             # Add the new user message to the conversation history
             conversation_history = request.session['conversation_history']
             conversation_history.append({"role": "user", "content": user_message})
+            rag_prompt = rag_drug_info(user_message)
+            conversation_history.append({"role": "system", "content": rag_prompt})
 
             # OpenAI ChatCompletion request with full conversation history
             completion = client.chat.completions.create(
